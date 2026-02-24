@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Testimonials Slider</title>
+  <style>
+    :root{
+      --bg:#0b0b0c;
+      --card:#121214;
+      --text:#f2f2f3;
+      --muted:rgba(242,242,243,.72);
+      --line:rgba(255,255,255,.10);
+      --shadow: 0 12px 40px rgba(0,0,0,.45);
+      --radius:18px;
+    }
+
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--text);}
+    body{display:flex; align-items:center; justify-content:center; padding:24px; box-sizing:border-box;}
+
+    .wrap{ width:min(980px, 100%); }
+
+    .header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:14px;
+    }
+
+    .title{
+      font:600 18px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      letter-spacing:.2px;
+      margin:0;
+    }
+
+    .sub{
+      font:500 13px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color:var(--muted);
+      margin:6px 0 0;
+    }
+
+    .controls{ display:flex; gap:10px; align-items:center; }
+
+    button{
+      appearance:none;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      color:var(--text);
+      border-radius:999px;
+      padding:10px 12px;
+      cursor:pointer;
+      transition:transform .08s ease, background .2s ease;
+      font:600 13px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+    button:hover{ background:rgba(255,255,255,.07); }
+    button:active{ transform:scale(.98); }
+
+    .track{
+      position:relative;
+      overflow:hidden;
+      border-radius:var(--radius);
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .rail{
+      display:flex;
+      gap:14px;
+      padding:16px;
+      overflow-x:auto;
+      scroll-snap-type:x mandatory;
+      scroll-behavior:smooth;
+      scrollbar-width:none;
+      -webkit-overflow-scrolling:touch;
+    }
+    .rail::-webkit-scrollbar{ display:none; }
+
+    .card{
+      flex:0 0 min(520px, 86vw);
+      scroll-snap-align:start;
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:18px 18px 16px;
+      box-sizing:border-box;
+    }
+
+    .stars{
+      font:700 14px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      letter-spacing:.4px;
+      margin-bottom:10px;
+      color:#fff;
+      opacity:.92;
+      user-select:none;
+    }
+
+    .quote{
+      font:500 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      margin:0 0 14px;
+      color:var(--text);
+    }
+
+    .meta{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      color:var(--muted);
+      font:600 13px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .name{ color:rgba(242,242,243,.88); }
+    .rightMeta{ opacity:.9; }
+
+    .dots{
+      display:flex;
+      gap:8px;
+      justify-content:center;
+      padding:12px 0 2px;
+    }
+    .dot{
+      width:7px;
+      height:7px;
+      border-radius:999px;
+      background:rgba(255,255,255,.22);
+      border:1px solid rgba(255,255,255,.12);
+      cursor:pointer;
+    }
+    .dot.active{
+      background:#fff;
+      border-color:rgba(255,255,255,.4);
+    }
+
+    .fadeL, .fadeR{
+      position:absolute; top:0; bottom:0; width:36px; pointer-events:none;
+    }
+    .fadeL{ left:0; background:linear-gradient(90deg, rgba(11,11,12,1), rgba(11,11,12,0)); }
+    .fadeR{ right:0; background:linear-gradient(270deg, rgba(11,11,12,1), rgba(11,11,12,0)); }
+
+    @media (max-width:520px){
+      .card{ padding:16px; }
+      .quote{ font-size:15px; }
+      .controls button{ padding:10px 10px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div>
+        <h1 class="title">What customers say</h1>
+        <p class="sub" id="subline">Loading testimonials…</p>
+      </div>
+      <div class="controls">
+        <button id="prev" aria-label="Previous">←</button>
+        <button id="next" aria-label="Next">→</button>
+      </div>
+    </div>
+
+    <div class="track">
+      <div class="fadeL"></div>
+      <div class="fadeR"></div>
+      <div class="rail" id="rail" aria-label="Testimonials"></div>
+    </div>
+
+    <div class="dots" id="dots" aria-hidden="true"></div>
+  </div>
+
+<script>
+/* ====== GOOGLE SHEETS CONFIG (already set for you) ====== */
+const USE_SHEETS = true;
+const SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQZXPZDKBNB9IPq3vZ-6aE6gktPWVuO88xMy2UgCCJ8qbhguOQ0NECV_8tUjzC0uzL2WSX5h6K-CbUQ/pub?gid=0&single=true&output=csv";
+
+/* Fallback demo (used only if the sheet can’t load) */
+const DEMO = [
+  { name: "James P", text: "Best scans I’ve had in Melbourne. Colours and grain look exactly like the negs.", rating: 5, date: "Feb 2026", source:"Google" },
+  { name: "Sophie L", text: "Fast turnaround, super consistent. You can tell the workflow is modern and dialled.", rating: 5, date: "Jan 2026", source:"Google" },
+];
+
+const rail = document.getElementById("rail");
+const dots = document.getElementById("dots");
+const subline = document.getElementById("subline");
+const btnPrev = document.getElementById("prev");
+const btnNext = document.getElementById("next");
+
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+function stars(n){ n = clamp(parseInt(n||5,10), 1, 5); return "★★★★★".slice(0,n) + "☆☆☆☆☆".slice(0,5-n); }
+
+function cardHTML(t){
+  const rating = clamp(parseInt(t.rating||5,10),1,5);
+  const right = [t.source, t.date].filter(Boolean).join(" • ");
+  return `
+    <article class="card">
+      <div class="stars" aria-label="${rating} stars">${stars(rating)}</div>
+      <p class="quote">“${esc(t.text)}”</p>
+      <div class="meta">
+        <div class="name">— ${esc(t.name || "Anonymous")}</div>
+        <div class="rightMeta">${esc(right)}</div>
+      </div>
+    </article>
+  `;
+}
+
+function setActiveDot(i){
+  [...dots.children].forEach((d,idx)=>d.classList.toggle("active", idx===i));
+}
+
+function scrollToIndex(i){
+  const card = rail.children[i];
+  if(!card) return;
+  card.scrollIntoView({ behavior:"smooth", inline:"start", block:"nearest" });
+  setActiveDot(i);
+}
+
+function currentIndex(){
+  const cards = [...rail.children];
+  const left = rail.scrollLeft;
+  let best = 0, bestDist = Infinity;
+  cards.forEach((c,i)=>{
+    const dist = Math.abs(c.offsetLeft - left);
+    if(dist < bestDist){ bestDist = dist; best = i; }
+  });
+  return best;
+}
+
+function build(tests){
+  rail.innerHTML = tests.map(cardHTML).join("");
+  dots.innerHTML = tests.map((_,i)=>`<div class="dot ${i===0?'active':''}" data-i="${i}"></div>`).join("");
+  subline.textContent = `${tests.length} reviews • swipe on mobile`;
+
+  dots.addEventListener("click", (e)=>{
+    const dot = e.target.closest(".dot");
+    if(!dot) return;
+    scrollToIndex(parseInt(dot.dataset.i,10));
+  });
+
+  rail.addEventListener("scroll", ()=>{
+    window.clearTimeout(rail.__t);
+    rail.__t = window.setTimeout(()=>setActiveDot(currentIndex()), 80);
+  }, { passive:true });
+
+  btnPrev.onclick = ()=> scrollToIndex(clamp(currentIndex()-1, 0, tests.length-1));
+  btnNext.onclick = ()=> scrollToIndex(clamp(currentIndex()+1, 0, tests.length-1));
+
+  // auto-advance
+  let auto = window.setInterval(()=> {
+    const i = currentIndex();
+    const next = (i+1) % tests.length;
+    scrollToIndex(next);
+  }, 6500);
+
+  // pause auto on interaction
+  ["pointerdown","mouseenter","touchstart","focusin"].forEach(evt=>{
+    rail.addEventListener(evt, ()=>{ if(auto){ clearInterval(auto); auto=null; } }, { passive:true });
+  });
+}
+
+async function loadFromSheetsCSV(url){
+  const res = await fetch(url, { cache:"no-store" });
+  if(!res.ok) throw new Error("Failed to fetch CSV");
+  const csv = await res.text();
+
+  // small CSV parser (handles quoted commas)
+  const rows = [];
+  let row = [], cur = "", inQ = false;
+  for(let i=0;i<csv.length;i++){
+    const ch = csv[i], nx = csv[i+1];
+    if(ch === '"' && nx === '"'){ cur += '"'; i++; continue; }
+    if(ch === '"'){ inQ = !inQ; continue; }
+    if(ch === '\n' && !inQ){ row.push(cur); rows.push(row); row=[]; cur=""; continue; }
+    if(ch === ',' && !inQ){ row.push(cur); cur=""; continue; }
+    if(ch !== '\r') cur += ch;
+  }
+  if(cur.length || row.length){ row.push(cur); rows.push(row); }
+
+  const headers = rows.shift().map(h => h.trim().toLowerCase());
+  const idx = (k)=> headers.indexOf(k);
+
+  const out = rows
+    .filter(r => r.some(cell => String(cell).trim().length))
+    .map(r => ({
+      name: (r[idx("name")]||"").trim(),
+      text: (r[idx("text")]||"").trim(),
+      rating: (r[idx("rating")]||"5").trim(),
+      date: (r[idx("date")]||"").trim(),
+      source: (r[idx("source")]||"").trim(),
+    }))
+    .filter(x => x.text);
+
+  return out.length ? out : DEMO;
+}
+
+(async function init(){
+  try{
+    if(USE_SHEETS){
+      const data = await loadFromSheetsCSV(SHEETS_CSV_URL);
+      build(data);
+    } else {
+      build(DEMO);
+    }
+  } catch(e){
+    subline.textContent = "Couldn’t load Google Sheet — showing demo";
+    build(DEMO);
+  }
+})();
+</script>
+</body>
+</html>
