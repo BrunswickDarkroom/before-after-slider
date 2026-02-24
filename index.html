@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Before/After Slider</title>
+  <style>
+    html, body { margin:0; height:100%; background:#111; }
+    /* Make it fill the iframe area Framer gives it */
+    .wrap { width:100%; height:100%; min-height:100vh; display:block; }
+
+    .ba-container{
+      position:relative;
+      width:100%;
+      height:100%;
+      min-height:100vh;
+      overflow:hidden;
+      touch-action:none;
+      user-select:none;
+      -webkit-user-select:none;
+      border-radius:18px;
+    }
+
+    .ba-before, .ba-after{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      object-position:center center;
+      display:block;
+      pointer-events:none;
+    }
+
+    /* AFTER is revealed on the RIGHT */
+    .ba-after{
+      clip-path: inset(0 0 0 50%);
+      -webkit-clip-path: inset(0 0 0 50%);
+      will-change: clip-path;
+    }
+
+    .ba-slider{
+      position:absolute;
+      top:0;
+      left:50%;
+      width:2px;
+      height:100%;
+      background:#fff;
+      cursor:ew-resize;
+      box-shadow:
+        0 0 6px rgba(0,0,0,0.35),
+        0 0 20px rgba(0,0,0,0.15);
+      will-change:left;
+    }
+
+    .ba-handle{
+      position:absolute;
+      top:50%;
+      left:-9px;
+      width:18px;
+      height:18px;
+      background:#fff;
+      border-radius:50%;
+      transform:translateY(-50%);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    }
+
+    /* Label overlays that clip with the slider */
+    .ba-overlay{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      will-change: clip-path;
+    }
+
+    .ba-overlay-before{
+      clip-path: inset(0 50% 0 0);
+      -webkit-clip-path: inset(0 50% 0 0);
+    }
+
+    .ba-overlay-after{
+      clip-path: inset(0 0 0 50%);
+      -webkit-clip-path: inset(0 0 0 50%);
+    }
+
+    .ba-label{
+      position:absolute;
+      bottom:20px;
+      padding:8px 12px;
+      font:500 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color:#fff;
+      background:rgba(0,0,0,0.45);
+      backdrop-filter: blur(3px);
+      border-radius:6px;
+      max-width: calc(100% - 40px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ba-left{ left:20px; }
+    .ba-right{ right:20px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="ba-container" id="ba1">
+      <img
+        src="https://framerusercontent.com/images/CVDXmP6V4c7XPRDjGlGamCWsCA.jpg?scale-down-to=1024&width=2467&height=1645"
+        class="ba-before"
+        alt="Leading Melbourne Film Lab Scan"
+        draggable="false"
+      />
+
+      <img
+        src="https://framerusercontent.com/images/6qYLLmVnOZDWNeci3xXbZqkKkLk.jpg?scale-down-to=1024&width=4861&height=3241"
+        class="ba-after"
+        alt="Brunswick Darkroom Scan"
+        draggable="false"
+      />
+
+      <div class="ba-overlay ba-overlay-before">
+        <div class="ba-label ba-left">Leading Melbourne Film Lab Scan</div>
+      </div>
+
+      <div class="ba-overlay ba-overlay-after">
+        <div class="ba-label ba-right">Brunswick Darkroom Scan</div>
+      </div>
+
+      <div class="ba-slider" aria-hidden="true">
+        <div class="ba-handle"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const container = document.getElementById("ba1");
+      const after = container.querySelector(".ba-after");
+      const slider = container.querySelector(".ba-slider");
+      const overlayBefore = container.querySelector(".ba-overlay-before");
+      const overlayAfter  = container.querySelector(".ba-overlay-after");
+
+      function setPctFromClientX(clientX){
+        const rect = container.getBoundingClientRect();
+        let x = clientX - rect.left;
+        x = Math.max(0, Math.min(x, rect.width));
+        const pct = (x / rect.width) * 100;
+
+        // BEFORE visible on left
+        overlayBefore.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+        overlayBefore.style.webkitClipPath = `inset(0 ${100-pct}% 0 0)`;
+
+        // AFTER visible on right
+        const leftInset = pct;
+        after.style.clipPath = `inset(0 0 0 ${leftInset}%)`;
+        after.style.webkitClipPath = `inset(0 0 0 ${leftInset}%)`;
+
+        overlayAfter.style.clipPath = `inset(0 0 0 ${leftInset}%)`;
+        overlayAfter.style.webkitClipPath = `inset(0 0 0 ${leftInset}%)`;
+
+        slider.style.left = pct + "%";
+      }
+
+      // init at 50%
+      const r0 = container.getBoundingClientRect();
+      setPctFromClientX(r0.left + r0.width / 2);
+
+      let dragging = false;
+
+      container.addEventListener("pointerdown", (e) => {
+        dragging = true;
+        container.setPointerCapture(e.pointerId);
+        setPctFromClientX(e.clientX);
+      });
+
+      container.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        setPctFromClientX(e.clientX);
+      });
+
+      container.addEventListener("pointerup", () => dragging = false);
+      container.addEventListener("pointercancel", () => dragging = false);
+    })();
+  </script>
+</body>
+</html>
