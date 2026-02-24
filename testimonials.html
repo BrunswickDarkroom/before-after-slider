@@ -21,27 +21,14 @@
 
     .wrap{ width:min(980px, 100%); }
 
-    .header{
+    /* Header removed, keep controls aligned to the right */
+    .controls{
       display:flex;
-      align-items:flex-end;
-      justify-content:space-between;
-      gap:16px;
+      gap:10px;
+      justify-content:flex-end;
       margin-bottom:14px;
+      align-items:center;
     }
-
-    .title{
-      font:600 18px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      letter-spacing:.2px;
-      margin:0;
-    }
-
-    .sub{
-      font:500 13px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      color:var(--muted);
-      margin:6px 0 0;
-    }
-
-    .controls{ display:flex; gap:10px; align-items:center; }
 
     button.ctrl{
       appearance:none;
@@ -99,7 +86,7 @@
       user-select:none;
     }
 
-    /* ===== clamp + fade ===== */
+    /* ===== clamp ===== */
     .quote{
       position:relative;
       font:500 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -111,7 +98,9 @@
       -webkit-line-clamp:6;
       overflow:hidden;
     }
-    .quote::after{
+
+    /* Fade ONLY when clamped */
+    .card.clamped .quote::after{
       content:"";
       position:absolute;
       left:0; right:0; bottom:0;
@@ -188,15 +177,9 @@
 
 <body>
   <div class="wrap">
-    <div class="header">
-      <div>
-        <h1 class="title">What customers say</h1>
-        <p class="sub" id="subline">Loading testimonials…</p>
-      </div>
-      <div class="controls">
-        <button class="ctrl" id="prev" aria-label="Previous">←</button>
-        <button class="ctrl" id="next" aria-label="Next">→</button>
-      </div>
+    <div class="controls">
+      <button class="ctrl" id="prev" aria-label="Previous">←</button>
+      <button class="ctrl" id="next" aria-label="Next">→</button>
     </div>
 
     <div class="track">
@@ -213,7 +196,6 @@ const SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQZXPZDK
 
 const rail = document.getElementById("rail");
 const dots = document.getElementById("dots");
-const subline = document.getElementById("subline");
 const btnPrev = document.getElementById("prev");
 const btnNext = document.getElementById("next");
 
@@ -301,7 +283,6 @@ function wireReadMore(){
     if(!btn) return;
 
     const card = btn.closest(".card");
-    // if button was hidden, do nothing (extra safety)
     if (btn.dataset.hidden === "1") return;
 
     const expanded = card.classList.toggle("expanded");
@@ -309,6 +290,7 @@ function wireReadMore(){
     btn.setAttribute("aria-expanded", expanded ? "true" : "false");
   });
 }
+
 function updateReadMoreVisibility(){
   const cards = rail.querySelectorAll(".card");
   cards.forEach(card => {
@@ -316,27 +298,28 @@ function updateReadMoreVisibility(){
     const btn = card.querySelector(".readmore");
     if(!quote || !btn) return;
 
-    // Make sure we're measuring the clamped state
+    // Measure clamped state
     card.classList.remove("expanded");
     btn.textContent = "Read more";
     btn.setAttribute("aria-expanded", "false");
 
-    // If content overflows the 6-line clamp, show the button
     const isClamped = quote.scrollHeight > quote.clientHeight + 1;
 
     if(isClamped){
+      card.classList.add("clamped");
       btn.style.display = "inline";
       btn.dataset.hidden = "0";
     } else {
+      card.classList.remove("clamped"); // removes fade
       btn.style.display = "none";
       btn.dataset.hidden = "1";
     }
   });
 }
+
 function build(tests){
   rail.innerHTML = tests.map(cardHTML).join("");
   dots.innerHTML = tests.map((_,i)=>`<div class="dot ${i===0?'active':''}" data-i="${i}"></div>`).join("");
-  subline.textContent = `${tests.length} reviews • swipe on mobile`;
 
   dots.onclick = (e)=>{
     const dot = e.target.closest(".dot");
@@ -349,13 +332,22 @@ function build(tests){
     rail.__t = window.setTimeout(()=>setActiveDot(currentIndex()), 80);
   }, { passive:true });
 
-  btnPrev.onclick = ()=> scrollToIndex(clamp(currentIndex()-1, 0, tests.length-1));
-  btnNext.onclick = ()=> scrollToIndex(clamp(currentIndex()+1, 0, tests.length-1));
+  // LOOPING PREV/NEXT
+  btnPrev.onclick = ()=> {
+    const i = currentIndex();
+    const prev = (i - 1 + tests.length) % tests.length;
+    scrollToIndex(prev);
+  };
+  btnNext.onclick = ()=> {
+    const i = currentIndex();
+    const next = (i + 1) % tests.length;
+    scrollToIndex(next);
+  };
 
   wireReadMore();
-requestAnimationFrame(updateReadMoreVisibility);
+  requestAnimationFrame(updateReadMoreVisibility);
 
-  // auto-advance, pause on interaction
+  // auto-advance, loops naturally
   let auto = window.setInterval(()=> {
     const i = currentIndex();
     const next = (i+1) % tests.length;
@@ -372,7 +364,6 @@ requestAnimationFrame(updateReadMoreVisibility);
     const data = await loadFromSheetsCSV(SHEETS_CSV_URL);
     build(data);
   } catch(e){
-    subline.textContent = "Couldn’t load reviews (check Sheet publish settings)";
     build([{name:"Brunswick Darkroom",text:"Reviews failed to load. Re-check your Google Sheets publish-to-web CSV link.",rating:5,date:"",source:""}]);
   }
 })();
