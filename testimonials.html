@@ -299,13 +299,40 @@ function wireReadMore(){
   rail.addEventListener("click", (e)=>{
     const btn = e.target.closest(".readmore");
     if(!btn) return;
+
     const card = btn.closest(".card");
+    // if button was hidden, do nothing (extra safety)
+    if (btn.dataset.hidden === "1") return;
+
     const expanded = card.classList.toggle("expanded");
     btn.textContent = expanded ? "Read less" : "Read more";
     btn.setAttribute("aria-expanded", expanded ? "true" : "false");
   });
 }
+function updateReadMoreVisibility(){
+  const cards = rail.querySelectorAll(".card");
+  cards.forEach(card => {
+    const quote = card.querySelector(".quote");
+    const btn = card.querySelector(".readmore");
+    if(!quote || !btn) return;
 
+    // Make sure we're measuring the clamped state
+    card.classList.remove("expanded");
+    btn.textContent = "Read more";
+    btn.setAttribute("aria-expanded", "false");
+
+    // If content overflows the 6-line clamp, show the button
+    const isClamped = quote.scrollHeight > quote.clientHeight + 1;
+
+    if(isClamped){
+      btn.style.display = "inline";
+      btn.dataset.hidden = "0";
+    } else {
+      btn.style.display = "none";
+      btn.dataset.hidden = "1";
+    }
+  });
+}
 function build(tests){
   rail.innerHTML = tests.map(cardHTML).join("");
   dots.innerHTML = tests.map((_,i)=>`<div class="dot ${i===0?'active':''}" data-i="${i}"></div>`).join("");
@@ -326,6 +353,7 @@ function build(tests){
   btnNext.onclick = ()=> scrollToIndex(clamp(currentIndex()+1, 0, tests.length-1));
 
   wireReadMore();
+requestAnimationFrame(updateReadMoreVisibility);
 
   // auto-advance, pause on interaction
   let auto = window.setInterval(()=> {
