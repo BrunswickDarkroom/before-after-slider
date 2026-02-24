@@ -63,6 +63,7 @@
       scroll-behavior:smooth;
       scrollbar-width:none;
       -webkit-overflow-scrolling:touch;
+      overscroll-behavior-x: contain; /* IMPORTANT: prevents scroll from chaining to parent */
     }
     .rail::-webkit-scrollbar{ display:none; }
 
@@ -262,7 +263,11 @@ function setActiveDot(i){
 function scrollToIndex(i){
   const card = rail.children[i];
   if(!card) return;
-  card.scrollIntoView({ behavior:"smooth", inline:"start", block:"nearest" });
+
+  // IMPORTANT: do NOT use scrollIntoView (it can scroll the parent page)
+  const left = card.offsetLeft;
+  rail.scrollTo({ left, behavior: "smooth" });
+
   setActiveDot(i);
 }
 
