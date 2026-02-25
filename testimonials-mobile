@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Testimonials Mobile</title>
+
+  <style>
+    :root{
+      --bg:#121212;
+      --card:#151515;
+      --text:#f2f2f3;
+      --muted:rgba(242,242,243,.72);
+      --line:rgba(255,255,255,.10);
+      --shadow: 0 14px 50px rgba(0,0,0,.55);
+      --radius:18px;
+      --fadeTo:#151515; /* must match --card */
+      --pad:14px;
+      --gap:12px;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      overflow:hidden; /* IMPORTANT: embed can’t create page scroll */
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+
+    .wrap{
+      width:100%;
+      max-width: 620px; /* mobile embed friendly */
+    }
+
+    /* simple title (optional; remove if you want) */
+    .title{
+      font-size:16px;
+      font-weight:600;
+      letter-spacing:.2px;
+      margin:0 0 10px 0;
+      color:#fff;
+    }
+
+    .viewport{
+      position:relative;
+      border-radius:var(--radius);
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      touch-action:pan-y; /* allow vertical scroll on parent page */
+    }
+
+    .track{
+      display:flex;
+      gap:var(--gap);
+      padding:var(--pad);
+      will-change:transform;
+      transform:translate3d(0,0,0);
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:16px 16px 14px;
+      flex:0 0 var(--cardW, 320px);
+      min-width:0;
+      position:relative;
+    }
+
+    .stars{
+      font:700 13px/1 system-ui;
+      letter-spacing:.35px;
+      margin:0 0 8px;
+      opacity:.95;
+      user-select:none;
+    }
+
+    /* 4-line clamp */
+    .quote{
+      position:relative;
+      margin:0;
+      font-size:15px;
+      line-height:1.45em;
+      color:var(--text);
+
+      display:-webkit-box;
+      -webkit-box-orient:vertical;
+      -webkit-line-clamp:4;
+      overflow:hidden;
+    }
+
+    /* fade only when clamped AND not expanded */
+    .quote.clamped::after{
+      content:"";
+      position:absolute;
+      left:0; right:0; bottom:0;
+      height:26px;
+      pointer-events:none;
+      background:linear-gradient(transparent, var(--fadeTo));
+    }
+
+    .card.expanded .quote{
+      -webkit-line-clamp:unset;
+      overflow:visible;
+    }
+    .card.expanded .quote::after{ display:none; }
+
+    .readmore{
+      appearance:none;
+      border:0;
+      padding:0;
+      margin-top:8px;
+      background:transparent;
+      color:rgba(242,242,243,.92);
+      font:700 13px/1.2 system-ui;
+      cursor:pointer;
+      opacity:.82;
+      display:none; /* shown only if clamped */
+    }
+    .readmore:hover{ opacity:1; text-decoration:underline; }
+
+    .meta{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-top:10px;
+      font-size:12.5px;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .name{
+      color:rgba(242,242,243,.9);
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .rightMeta{
+      opacity:.9;
+      flex:0 0 auto;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="title">5.0 stars on Google — see what others say about us</div>
+
+    <div class="viewport" id="viewport" aria-label="Testimonials carousel">
+      <div class="track" id="track"></div>
+    </div>
+  </div>
+
+<script>
+  const SHEETS_CSV_URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQZXPZDKBNB9IPq3vZ-6aE6gktPWVuO88xMy2UgCCJ8qbhguOQ0NECV_8tUjzC0uzL2WSX5h6K-CbUQ/pub?gid=0&single=true&output=csv";
+
+  const viewport = document.getElementById("viewport");
+  const track = document.getElementById("track");
+
+  function esc(s){
+    return String(s ?? "").replace(/[&<>"']/g, m => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[m]));
+  }
+  function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+  function stars(n){
+    n = clamp(parseInt(n||5,10), 1, 5);
+    return "★★★★★".slice(0,n) + "☆☆☆☆☆".slice(0,5-n);
+  }
+
+  // robust CSV parser (commas + quotes)
+  function parseCSV(csv){
+    const rows = [];
+    let row = [], cur = "", inQ = false;
+    for(let i=0;i<csv.length;i++){
+      const ch = csv[i], nx = csv[i+1];
+      if(ch === '"' && nx === '"'){ cur += '"'; i++; continue; }
+      if(ch === '"'){ inQ = !inQ; continue; }
+      if(ch === '\n' && !inQ){ row.push(cur); rows.push(row); row=[]; cur=""; continue; }
+      if(ch === ',' && !inQ){ row.push(cur); cur=""; continue; }
+      if(ch !== '\r') cur += ch;
+    }
+    if(cur.length || row.length){ row.push(cur); rows.push(row); }
+    return rows;
+  }
+
+  async function loadFromSheetsCSV(url){
+    const res = await fetch(url, { cache:"no-store" });
+    if(!res.ok) throw new Error("Failed to fetch CSV");
+    const csv = await res.text();
+    const rows = parseCSV(csv);
+    const headers = (rows.shift() || []).map(h => h.trim().toLowerCase());
+    const idx = (k)=> headers.indexOf(k);
+
+    return rows
+      .filter(r => r.some(cell => String(cell).trim().length))
+      .map(r => ({
+        name: (r[idx("name")]||"").trim(),
+        text: (r[idx("text")]||"").trim(),
+        rating: (r[idx("rating")]||"5").trim(),
+        date: (r[idx("date")]||"").trim(),
+        source: (r[idx("source")]||"").trim(),
+      }))
+      .filter(x => x.text);
+  }
+
+  function cardHTML(t){
+    const rating = clamp(parseInt(t.rating||5,10),1,5);
+    const right = [t.source, t.date].filter(Boolean).join(" • ");
+    return `
+      <article class="card">
+        <div class="stars" aria-label="${rating} stars">${stars(rating)}</div>
+        <p class="quote">“${esc(t.text)}”</p>
+        <button class="readmore" type="button" aria-expanded="false">Read more</button>
+        <div class="meta">
+          <div class="name">— ${esc(t.name || "Anonymous")}</div>
+          <div class="rightMeta">${esc(right)}</div>
+        </div>
+      </article>
+    `;
+  }
+
+  /* ===== Transform-based, swipe-only, looping carousel ===== */
+  let base = [];
+  let items = [];
+  let cloneCount = 1;   // mobile: show 1 at a time, clone 1 on each side
+  let index = 0;        // index in items[]
+  let cardW = 320;
+  let gap = 12;
+  let animating = false;
+
+  function computeLayout(){
+    const vw = viewport.getBoundingClientRect().width;
+
+    const style = getComputedStyle(track);
+    const padL = parseFloat(style.paddingLeft || "14");
+    const padR = parseFloat(style.paddingRight || "14");
+    gap = parseFloat(style.gap || "12") || 12;
+
+    // 1 card per view
+    const usable = vw - padL - padR;
+    cardW = Math.floor(usable);
+
+    track.style.setProperty("--cardW", cardW + "px");
+  }
+
+  function setTransform(withTransition=true){
+    const x = -index * (cardW + gap);
+    track.style.transition = withTransition ? "transform 420ms ease" : "none";
+    track.style.transform = `translate3d(${x}px,0,0)`;
+  }
+
+  function rebuild(){
+    computeLayout();
+
+    if(!base.length){
+      track.innerHTML = cardHTML({
+        name:"Brunswick Darkroom",
+        text:"No reviews loaded.",
+        rating:5,
+        date:"",
+        source:""
+      });
+      items = [];
+      return;
+    }
+
+    const head = base.slice(-cloneCount);
+    const tail = base.slice(0, cloneCount);
+    items = [...head, ...base, ...tail];
+
+    track.innerHTML = items.map(cardHTML).join("");
+
+    index = cloneCount; // first real card
+    setTransform(false);
+
+    // clamp/fade/readmore
+    updateClampUI();
+
+    track.ontransitionend = () => {
+      if(!base.length) return;
+
+      const endIndex = cloneCount + base.length;
+      if(index >= endIndex){
+        index = cloneCount;
+        setTransform(false);
+      }
+      if(index < cloneCount){
+        index = cloneCount + base.length - 1;
+        setTransform(false);
+      }
+      animating = false;
+    };
+  }
+
+  function next(){
+    if(animating || !base.length) return;
+    animating = true;
+    index += 1;
+    setTransform(true);
+  }
+  function prev(){
+    if(animating || !base.length) return;
+    animating = true;
+    index -= 1;
+    setTransform(true);
+  }
+
+  /* Clamp detection (only show fade + Read more when needed) */
+  function updateClampUI(){
+    requestAnimationFrame(() => {
+      const cards = track.querySelectorAll(".card");
+      cards.forEach(card => {
+        const quote = card.querySelector(".quote");
+        const btn = card.querySelector(".readmore");
+        if(!quote || !btn) return;
+
+        // reset for measurement
+        card.classList.remove("expanded");
+        btn.textContent = "Read more";
+        btn.setAttribute("aria-expanded", "false");
+
+        quote.classList.remove("clamped");
+        const isClamped = quote.scrollHeight > quote.clientHeight + 1;
+
+        if(isClamped){
+          quote.classList.add("clamped");
+          btn.style.display = "inline";
+        } else {
+          quote.classList.remove("clamped");
+          btn.style.display = "none";
+        }
+      });
+    });
+  }
+
+  /* Read more toggle */
+  track.addEventListener("click", (e)=>{
+    const btn = e.target.closest(".readmore");
+    if(!btn) return;
+
+    const card = btn.closest(".card");
+    if(!card) return;
+
+    const expanded = card.classList.toggle("expanded");
+    btn.textContent = expanded ? "Read less" : "Read more";
+    btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+  });
+
+  /* Swipe */
+  let startX = 0, dx = 0, dragging = false;
+
+  viewport.addEventListener("pointerdown", (e)=>{
+    // don't start swipe on buttons
+    if(e.target.closest("button")) return;
+
+    dragging = true;
+    startX = e.clientX;
+    dx = 0;
+    track.style.transition = "none";
+    viewport.setPointerCapture(e.pointerId);
+  });
+
+  viewport.addEventListener("pointermove", (e)=>{
+    if(!dragging) return;
+    dx = e.clientX - startX;
+    const x = -index * (cardW + gap) + dx;
+    track.style.transform = `translate3d(${x}px,0,0)`;
+  });
+
+  viewport.addEventListener("pointerup", ()=>{
+    if(!dragging) return;
+    dragging = false;
+
+    const threshold = Math.min(80, cardW * 0.18);
+    if(dx <= -threshold) next();
+    else if(dx >= threshold) prev();
+    else setTransform(true);
+  });
+
+  viewport.addEventListener("pointercancel", ()=>{
+    if(!dragging) return;
+    dragging = false;
+    setTransform(true);
+  });
+
+  /* Init + resize */
+  (async function init(){
+    try{
+      base = await loadFromSheetsCSV(SHEETS_CSV_URL);
+    } catch(e){
+      base = [{
+        name:"Brunswick Darkroom",
+        text:"Reviews failed to load. Re-check your Google Sheets publish-to-web CSV link.",
+        rating:5,
+        date:"",
+        source:""
+      }];
+    }
+
+    rebuild();
+
+    // run clamp detection again after fonts/layout settle
+    setTimeout(updateClampUI, 160);
+
+    let t=null;
+    window.addEventListener("resize", ()=>{
+      clearTimeout(t);
+      t=setTimeout(()=>{
+        // keep same base review visible on resize
+        const baseIdx = ((index - cloneCount) % base.length + base.length) % base.length;
+        rebuild();
+        index = cloneCount + baseIdx;
+        setTransform(false);
+        updateClampUI();
+      }, 120);
+    }, { passive:true });
+  })();
+</script>
+</body>
+</html>
