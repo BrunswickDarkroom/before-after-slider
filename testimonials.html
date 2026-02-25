@@ -1,378 +1,497 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Testimonials Slider</title>
-  <style>
-    :root{
-      --bg:#121212;
-      --card:#0b0b0c;
-      --text:#888888;
-      --muted:rgba(242,242,243,.72);
-      --line:rgba(255,255,255,.10);
-      --shadow: 0 12px 40px rgba(0,0,0,.45);
-      --radius:18px;
-      --fadeTo:#0b0b0c; /* must match card bg */
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Testimonials</title>
 
-    html,body{height:100%; margin:0; background:var(--bg); color:var(--text);}
-    body{display:flex; align-items:center; justify-content:center; padding:24px; box-sizing:border-box;}
+<style>
 
-    .wrap{ width:min(980px, 100%); }
+:root{
+--bg:#121212;
+--card:#151515;
+--text:#f2f2f3;
+--muted:rgba(242,242,243,.72);
+--line:rgba(255,255,255,.10);
+--shadow:0 14px 50px rgba(0,0,0,.55);
+--radius:18px;
+--fadeTo:#151515;
+}
 
-    /* Header removed, keep controls aligned to the right */
-    .controls{
-      display:flex;
-      gap:10px;
-      justify-content:flex-end;
-      margin-bottom:14px;
-      align-items:center;
-    }
-    .track{ overscroll-behavior: contain; }
+html,body{
+height:100%;
+margin:0;
+background:var(--bg);
+color:var(--text);
+overflow:hidden;
+}
 
-    button.ctrl{
-      appearance:none;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.04);
-      color:var(--text);
-      border-radius:999px;
-      padding:10px 12px;
-      cursor:pointer;
-      box-shadow:none;
-      transition:transform .08s ease, background .2s ease;
-      font:600 13px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-    }
-    button.ctrl:hover{ background:rgba(255,255,255,.07); }
-    button.ctrl:active{ transform:scale(.98); }
+*{box-sizing:border-box;}
 
-    .track{
-      position:relative;
-      overflow:hidden;
-      border-radius:var(--radius);
-      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      border:1px solid var(--line);
-      box-shadow: var(--shadow);
-    }
+body{
+display:flex;
+align-items:center;
+justify-content:center;
+padding:22px;
+font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+}
 
-    .rail{
-      display:flex;
-      gap:14px;
-      padding:16px;
-      overflow-x:auto;
-      scroll-snap-type:x mandatory;
-      scroll-behavior:smooth;
-      scrollbar-width:none;
-      -webkit-overflow-scrolling:touch;
-      overscroll-behavior-x: contain; /* IMPORTANT: prevents scroll from chaining to parent */
-    }
-    .rail::-webkit-scrollbar{ display:none; }
+.wrap{
+width:min(1100px,100%);
+}
 
-    .card{
-      flex:0 0 min(520px, 86vw);
-      scroll-snap-align:start;
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:16px;
-      padding:18px 18px 16px;
-      box-sizing:border-box;
-      position:relative;
-    }
+/* TITLE */
 
-    .stars{
-      font:700 14px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      letter-spacing:.4px;
-      margin-bottom:10px;
-      color:#fff;
-      opacity:.92;
-      user-select:none;
-    }
+.title{
+font-size:20px;
+font-weight:600;
+margin-bottom:14px;
+letter-spacing:.2px;
+color:#ffffff;
+}
 
-    /* ===== clamp ===== */
-    .quote{
-      position:relative;
-      font:500 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      margin:0 0 10px;
-      color:var(--text);
+/* VIEWPORT */
 
-      display:-webkit-box;
-      -webkit-box-orient:vertical;
-      -webkit-line-clamp:6;
-      overflow:hidden;
-    }
+.viewport{
+position:relative;
+border-radius:var(--radius);
+background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+border:1px solid var(--line);
+box-shadow:var(--shadow);
+overflow:hidden;
+touch-action:pan-y;
+}
 
-    /* Fade ONLY when clamped */
-    .card.clamped .quote::after{
-      content:"";
-      position:absolute;
-      left:0; right:0; bottom:0;
-      height:26px;
-      pointer-events:none;
-      background:linear-gradient(transparent, var(--fadeTo));
-    }
+/* TRACK */
 
-    .card.expanded .quote{
-      -webkit-line-clamp:unset;
-      overflow:visible;
-    }
-    .card.expanded .quote::after{
-      display:none;
-    }
+.track{
+display:flex;
+gap:14px;
+padding:16px;
+will-change:transform;
+transform:translate3d(0,0,0);
+}
 
-    .readmore{
-      appearance:none;
-      border:0;
-      padding:0;
-      background:transparent;
-      color:rgba(242,242,243,.9);
-      font:700 13px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      cursor:pointer;
-      opacity:.85;
-    }
-    .readmore:hover{ opacity:1; text-decoration:underline; }
+/* CARD */
 
-    .meta{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:space-between;
-      color:var(--muted);
-      font:600 13px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      margin-top:12px;
-    }
+.card{
+background:var(--card);
+border:1px solid var(--line);
+border-radius:16px;
+padding:18px 18px 16px;
+position:relative;
+flex:0 0 var(--cardW,520px);
+min-width:0;
+}
 
-    .name{ color:rgba(242,242,243,.88); }
-    .rightMeta{ opacity:.9; }
+.stars{
+font:700 14px/1 system-ui;
+margin-bottom:10px;
+}
 
-    .dots{
-      display:flex;
-      gap:8px;
-      justify-content:center;
-      padding:12px 0 2px;
-    }
-    .dot{
-      width:7px;
-      height:7px;
-      border-radius:999px;
-      background:rgba(255,255,255,.22);
-      border:1px solid rgba(255,255,255,.12);
-      cursor:pointer;
-    }
-    .dot.active{
-      background:#fff;
-      border-color:rgba(255,255,255,.4);
-    }
+/* QUOTE */
 
-    .fadeL, .fadeR{
-      position:absolute; top:0; bottom:0; width:36px; pointer-events:none;
-    }
-.fadeL{ left:0; background:linear-gradient(90deg, #121212, rgba(0b,0b,0c,0)); }
-.fadeR{ right:0; background:linear-gradient(270deg, #121212, rgba(0b,0b,0c,0)); }
+.quote{
+position:relative;
+font-size:16px;
+line-height:1.45em;
+margin:0 0 10px;
 
-    @media (max-width:520px){
-      .card{ padding:16px; }
-      .quote{ font-size:15px; }
-      button.ctrl{ padding:10px 10px; }
-    }
-  </style>
+display:-webkit-box;
+-webkit-box-orient:vertical;
+-webkit-line-clamp:6;
+overflow:hidden;
+}
+
+/* fade only when clamped */
+
+.quote.clamped::after{
+content:"";
+position:absolute;
+left:0;
+right:0;
+bottom:0;
+height:28px;
+background:linear-gradient(transparent,var(--fadeTo));
+}
+
+/* expanded */
+
+.card.expanded .quote{
+-webkit-line-clamp:unset;
+overflow:visible;
+}
+
+.card.expanded .quote::after{
+display:none;
+}
+
+/* READ MORE */
+
+.readmore{
+appearance:none;
+border:0;
+background:none;
+padding:0;
+margin-top:6px;
+
+font-size:13px;
+font-weight:700;
+color:white;
+cursor:pointer;
+
+display:none;
+opacity:.8;
+}
+
+.readmore:hover{
+opacity:1;
+text-decoration:underline;
+}
+
+/* META */
+
+.meta{
+display:flex;
+justify-content:space-between;
+margin-top:10px;
+font-size:13px;
+color:var(--muted);
+}
+
+.name{
+color:white;
+}
+
+/* CONTROLS */
+
+.controls{
+position:absolute;
+top:14px;
+right:14px;
+display:flex;
+gap:10px;
+z-index:5;
+}
+
+button.ctrl{
+appearance:none;
+border:1px solid var(--line);
+background:rgba(255,255,255,.05);
+color:white;
+
+width:44px;
+height:44px;
+
+border-radius:999px;
+cursor:pointer;
+
+font-size:18px;
+font-weight:700;
+}
+
+button.ctrl:hover{
+background:rgba(255,255,255,.1);
+}
+
+/* DOTS */
+
+.dots{
+display:flex;
+gap:8px;
+justify-content:center;
+padding-top:12px;
+}
+
+.dot{
+width:7px;
+height:7px;
+border-radius:999px;
+background:rgba(255,255,255,.25);
+cursor:pointer;
+}
+
+.dot.active{
+background:white;
+}
+
+/* EDGE FADES */
+
+.fadeL,.fadeR{
+position:absolute;
+top:0;
+bottom:0;
+width:36px;
+pointer-events:none;
+z-index:4;
+}
+
+.fadeL{
+left:0;
+background:linear-gradient(90deg,#121212,transparent);
+}
+
+.fadeR{
+right:0;
+background:linear-gradient(270deg,#121212,transparent);
+}
+
+</style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="controls">
-      <button class="ctrl" id="prev" aria-label="Previous">←</button>
-      <button class="ctrl" id="next" aria-label="Next">→</button>
-    </div>
 
-    <div class="track">
-      <div class="fadeL"></div>
-      <div class="fadeR"></div>
-      <div class="rail" id="rail" aria-label="Testimonials"></div>
-    </div>
+<div class="wrap">
 
-    <div class="dots" id="dots" aria-hidden="true"></div>
-  </div>
+<div class="title">
+5.0 stars on Google — see what others say about us
+</div>
+
+<div class="viewport">
+
+<div class="fadeL"></div>
+<div class="fadeR"></div>
+
+<div class="controls">
+<button class="ctrl" id="prev">←</button>
+<button class="ctrl" id="next">→</button>
+</div>
+
+<div class="track" id="track"></div>
+
+</div>
+
+<div class="dots" id="dots"></div>
+
+</div>
 
 <script>
-const SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQZXPZDKBNB9IPq3vZ-6aE6gktPWVuO88xMy2UgCCJ8qbhguOQ0NECV_8tUjzC0uzL2WSX5h6K-CbUQ/pub?gid=0&single=true&output=csv";
 
-const rail = document.getElementById("rail");
-const dots = document.getElementById("dots");
-const btnPrev = document.getElementById("prev");
-const btnNext = document.getElementById("next");
+const sheetURL =
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vQZXPZDKBNB9IPq3vZ-6aE6gktPWVuO88xMy2UgCCJ8qbhguOQ0NECV_8tUjzC0uzL2WSX5h6K-CbUQ/pub?gid=0&single=true&output=csv";
 
-function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
-function stars(n){ n = clamp(parseInt(n||5,10), 1, 5); return "★★★★★".slice(0,n) + "☆☆☆☆☆".slice(0,5-n); }
+const track=document.getElementById("track");
+const dots=document.getElementById("dots");
 
-function cardHTML(t){
-  const rating = clamp(parseInt(t.rating||5,10),1,5);
-  const right = [t.source, t.date].filter(Boolean).join(" • ");
-  return `
-    <article class="card">
-      <div class="stars" aria-label="${rating} stars">${stars(rating)}</div>
-      <p class="quote">“${esc(t.text)}”</p>
-      <button class="readmore" type="button" aria-expanded="false">Read more</button>
-      <div class="meta">
-        <div class="name">— ${esc(t.name || "Anonymous")}</div>
-        <div class="rightMeta">${esc(right)}</div>
-      </div>
-    </article>
-  `;
+let reviews=[];
+let index=0;
+let cardWidth=520;
+let gap=14;
+
+/* CSV parser */
+
+function parseCSV(text){
+
+const rows=[];
+let row=[],cur="",q=false;
+
+for(let i=0;i<text.length;i++){
+
+const c=text[i];
+const n=text[i+1];
+
+if(c=='"'&&n=='"'){cur+='"';i++;continue;}
+if(c=='"'){q=!q;continue;}
+
+if(c=='\n'&&!q){
+row.push(cur);
+rows.push(row);
+row=[];
+cur="";
+continue;
 }
 
-// robust CSV parser (handles commas + quotes)
-function parseCSV(csv){
-  const rows = [];
-  let row = [], cur = "", inQ = false;
-  for(let i=0;i<csv.length;i++){
-    const ch = csv[i], nx = csv[i+1];
-    if(ch === '"' && nx === '"'){ cur += '"'; i++; continue; }
-    if(ch === '"'){ inQ = !inQ; continue; }
-    if(ch === '\n' && !inQ){ row.push(cur); rows.push(row); row=[]; cur=""; continue; }
-    if(ch === ',' && !inQ){ row.push(cur); cur=""; continue; }
-    if(ch !== '\r') cur += ch;
-  }
-  if(cur.length || row.length){ row.push(cur); rows.push(row); }
-  return rows;
+if(c==','&&!q){
+row.push(cur);
+cur="";
+continue;
 }
 
-async function loadFromSheetsCSV(url){
-  const res = await fetch(url, { cache:"no-store" });
-  if(!res.ok) throw new Error("Failed to fetch CSV");
-  const csv = await res.text();
-  const rows = parseCSV(csv);
-  const headers = rows.shift().map(h => h.trim().toLowerCase());
-  const idx = (k)=> headers.indexOf(k);
-
-  return rows
-    .filter(r => r.some(cell => String(cell).trim().length))
-    .map(r => ({
-      name: (r[idx("name")]||"").trim(),
-      text: (r[idx("text")]||"").trim(),
-      rating: (r[idx("rating")]||"5").trim(),
-      date: (r[idx("date")]||"").trim(),
-      source: (r[idx("source")]||"").trim(),
-    }))
-    .filter(x => x.text);
+if(c!='\r')cur+=c;
 }
 
-function setActiveDot(i){
-  [...dots.children].forEach((d,idx)=>d.classList.toggle("active", idx===i));
+row.push(cur);
+rows.push(row);
+
+return rows;
+
 }
 
-function scrollToIndex(i){
-  const card = rail.children[i];
-  if(!card) return;
+/* Load */
 
-  // IMPORTANT: do NOT use scrollIntoView (it can scroll the parent page)
-  const left = card.offsetLeft;
-  rail.scrollTo({ left, behavior: "smooth" });
+async function load(){
 
-  setActiveDot(i);
+const r=await fetch(sheetURL);
+const t=await r.text();
+
+const rows=parseCSV(t);
+
+rows.shift();
+
+reviews=rows.map(r=>({
+
+name:r[0],
+text:r[1],
+rating:r[2],
+date:r[3],
+source:r[4]
+
+}));
+
+build();
+
 }
 
-function currentIndex(){
-  const cards = [...rail.children];
-  const left = rail.scrollLeft;
-  let best = 0, bestDist = Infinity;
-  cards.forEach((c,i)=>{
-    const dist = Math.abs(c.offsetLeft - left);
-    if(dist < bestDist){ bestDist = dist; best = i; }
-  });
-  return best;
+/* Build */
+
+function build(){
+
+track.innerHTML=reviews.map(r=>`
+
+<div class="card">
+
+<div class="stars">
+${"★★★★★".slice(0,r.rating)}
+</div>
+
+<p class="quote">${r.text}</p>
+
+<button class="readmore">
+Read more
+</button>
+
+<div class="meta">
+
+<div class="name">
+${r.name}
+</div>
+
+<div>
+${r.source} ${r.date}
+</div>
+
+</div>
+
+</div>
+
+`).join("");
+
+measureClamp();
+
+buildDots();
+
 }
 
-function wireReadMore(){
-  rail.addEventListener("click", (e)=>{
-    const btn = e.target.closest(".readmore");
-    if(!btn) return;
+/* Clamp detection */
 
-    const card = btn.closest(".card");
-    if (btn.dataset.hidden === "1") return;
+function measureClamp(){
 
-    const expanded = card.classList.toggle("expanded");
-    btn.textContent = expanded ? "Read less" : "Read more";
-    btn.setAttribute("aria-expanded", expanded ? "true" : "false");
-  });
+document.querySelectorAll(".card").forEach(card=>{
+
+const q=card.querySelector(".quote");
+const btn=card.querySelector(".readmore");
+
+if(q.scrollHeight>q.clientHeight+2){
+
+q.classList.add("clamped");
+btn.style.display="inline";
+
+}else{
+
+q.classList.remove("clamped");
+btn.style.display="none";
+
 }
 
-function updateReadMoreVisibility(){
-  const cards = rail.querySelectorAll(".card");
-  cards.forEach(card => {
-    const quote = card.querySelector(".quote");
-    const btn = card.querySelector(".readmore");
-    if(!quote || !btn) return;
+});
 
-    // Measure clamped state
-    card.classList.remove("expanded");
-    btn.textContent = "Read more";
-    btn.setAttribute("aria-expanded", "false");
-
-    const isClamped = quote.scrollHeight > quote.clientHeight + 1;
-
-    if(isClamped){
-      card.classList.add("clamped");
-      btn.style.display = "inline";
-      btn.dataset.hidden = "0";
-    } else {
-      card.classList.remove("clamped"); // removes fade
-      btn.style.display = "none";
-      btn.dataset.hidden = "1";
-    }
-  });
 }
 
-function build(tests){
-  rail.innerHTML = tests.map(cardHTML).join("");
-  dots.innerHTML = tests.map((_,i)=>`<div class="dot ${i===0?'active':''}" data-i="${i}"></div>`).join("");
+/* Read more */
 
-  dots.onclick = (e)=>{
-    const dot = e.target.closest(".dot");
-    if(!dot) return;
-    scrollToIndex(parseInt(dot.dataset.i,10));
-  };
+track.addEventListener("click",e=>{
 
-  rail.addEventListener("scroll", ()=>{
-    window.clearTimeout(rail.__t);
-    rail.__t = window.setTimeout(()=>setActiveDot(currentIndex()), 80);
-  }, { passive:true });
+if(!e.target.classList.contains("readmore"))return;
 
-  // LOOPING PREV/NEXT
-  btnPrev.onclick = ()=> {
-    const i = currentIndex();
-    const prev = (i - 1 + tests.length) % tests.length;
-    scrollToIndex(prev);
-  };
-  btnNext.onclick = ()=> {
-    const i = currentIndex();
-    const next = (i + 1) % tests.length;
-    scrollToIndex(next);
-  };
+const card=e.target.closest(".card");
 
-  wireReadMore();
-  requestAnimationFrame(updateReadMoreVisibility);
+card.classList.toggle("expanded");
 
-  // auto-advance, loops naturally
-  let auto = window.setInterval(()=> {
-    const i = currentIndex();
-    const next = (i+1) % tests.length;
-    scrollToIndex(next);
-  }, 6500);
+e.target.innerText=
+card.classList.contains("expanded")
+?"Read less"
+:"Read more";
 
-  ["pointerdown","mouseenter","touchstart","focusin"].forEach(evt=>{
-    rail.addEventListener(evt, ()=>{ if(auto){ clearInterval(auto); auto=null; } }, { passive:true });
-  });
+});
+
+/* Dots */
+
+function buildDots(){
+
+dots.innerHTML=reviews.map((_,i)=>
+
+`<div class="dot ${i==0?"active":""}" data-i="${i}"></div>`
+
+).join("");
+
+dots.onclick=e=>{
+
+if(!e.target.dataset.i)return;
+
+goTo(e.target.dataset.i);
+
+};
+
 }
 
-(async function init(){
-  try{
-    const data = await loadFromSheetsCSV(SHEETS_CSV_URL);
-    build(data);
-  } catch(e){
-    build([{name:"Brunswick Darkroom",text:"Reviews failed to load. Re-check your Google Sheets publish-to-web CSV link.",rating:5,date:"",source:""}]);
-  }
-})();
+/* Carousel */
+
+function goTo(i){
+
+index=i;
+
+track.style.transition="transform .5s";
+
+track.style.transform=
+`translateX(-${i*(cardWidth+gap)}px)`;
+
+document.querySelectorAll(".dot")
+.forEach((d,n)=>d.classList.toggle("active",n==i));
+
+}
+
+/* Controls */
+
+next.onclick=()=>{
+
+index=(index+1)%reviews.length;
+
+goTo(index);
+
+};
+
+prev.onclick=()=>{
+
+index=(index-1+reviews.length)%reviews.length;
+
+goTo(index);
+
+};
+
+/* Auto */
+
+setInterval(()=>{
+
+index=(index+1)%reviews.length;
+
+goTo(index);
+
+},6500);
+
+
+load();
+
 </script>
+
 </body>
 </html>
